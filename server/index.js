@@ -18,11 +18,31 @@ io.on('connection', (socket) => {
 
         if (error) return callback(error);
 
+        socket.emit('message', { user: 'admin', text: `${user.name}, 환영합니다. (${user.room})` });
+        socket.broadcast.to(user.room).emit('message', { user: 'admin', text: `${user.name}, 참여했습니다.` });
+
         socket.join(user.room);
+
+        io.to(user.room).emit('rootData', { room: user.room, users: getUsersInRoom(user.room) });
+
+        callback();
+    });
+
+    socket.on('sendMessage', (message, callback) => {
+        const user = getUser(socket.id);
+
+        io.to(user.room).emit('message', { user: user.name, text: message });
+        io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room) });
+
+        callback();
     });
 
     socket.on('disconnect', () => {
-        console.log('User has left!!!');
+        const user = removeUser(socket.id);
+
+        if (user) {
+            io.to(user.room).emit('message', { user: 'admin', text: `${user.name} 나갔습니다.` });
+        }
     });
 });
 
